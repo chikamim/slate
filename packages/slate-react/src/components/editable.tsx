@@ -1,41 +1,40 @@
-import React, { useEffect, useRef, useMemo, useCallback } from 'react'
+import throttle from 'lodash/throttle'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import scrollIntoView from 'scroll-into-view-if-needed'
 import {
   Editor,
   Element,
-  NodeEntry,
   Node,
+  NodeEntry,
   Range,
   Text,
   Transforms,
 } from 'slate'
-import throttle from 'lodash/throttle'
-import scrollIntoView from 'scroll-into-view-if-needed'
-
-import Children from './children'
-import Hotkeys from '../utils/hotkeys'
-import { IS_FIREFOX, IS_SAFARI, IS_EDGE_LEGACY } from '../utils/environment'
 import { ReactEditor } from '..'
+import { useIsomorphicLayoutEffect } from '../hooks/use-isomorphic-layout-effect'
 import { ReadOnlyContext } from '../hooks/use-read-only'
 import { useSlate } from '../hooks/use-slate'
-import { useIsomorphicLayoutEffect } from '../hooks/use-isomorphic-layout-effect'
 import {
   DOMElement,
   DOMNode,
   DOMRange,
+  DOMStaticRange,
   isDOMElement,
   isDOMNode,
   isDOMText,
-  DOMStaticRange,
   isPlainTextOnlyPaste,
 } from '../utils/dom'
+import { IS_EDGE_LEGACY, IS_FIREFOX, IS_SAFARI } from '../utils/environment'
+import Hotkeys from '../utils/hotkeys'
 import {
   EDITOR_TO_ELEMENT,
   ELEMENT_TO_NODE,
+  IS_FOCUSED,
   IS_READ_ONLY,
   NODE_TO_ELEMENT,
-  IS_FOCUSED,
   PLACEHOLDER_SYMBOL,
 } from '../utils/weak-maps'
+import Children from './children'
 
 // COMPAT: Firefox/Edge Legacy don't support the `beforeinput` event
 const HAS_BEFORE_INPUT_SUPPORT = !(IS_FIREFOX || IS_EDGE_LEGACY)
@@ -554,13 +553,16 @@ export const Editable = (props: EditableProps) => {
             ) {
               state.isComposing = false
 
+              // NOTE: WKWebView IME input workaround
+              Editor.move(editor, { unit: 'word' })
+              Editor.move(editor, { reverse: true })
               // COMPAT: In Chrome, `beforeinput` events for compositions
               // aren't correct and never fire the "insertFromComposition"
               // type that we need. So instead, insert whenever a composition
               // ends since it will already have been committed to the DOM.
-              if (!IS_SAFARI && !IS_FIREFOX && event.data) {
-                Editor.insertText(editor, event.data)
-              }
+              //if (!IS_SAFARI && !IS_FIREFOX && event.data) {
+              //editor.exec({ type: 'insert_text', text: event.data })
+              //}
             }
           },
           [attributes.onCompositionEnd]
