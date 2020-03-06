@@ -1,10 +1,10 @@
 /** @jsx jsx */
 
-import { Editor } from 'slate'
+import { Transforms } from 'slate'
 import { jsx } from '../../..'
 
 export const run = editor => {
-  Editor.insertText(editor, 'a')
+  Transforms.insertText(editor, 'a')
 }
 
 export const input = (
@@ -20,7 +20,6 @@ export const input = (
   </editor>
 )
 
-// TODO: the hanging selection here isn't right
 export const output = (
   <editor>
     <block>

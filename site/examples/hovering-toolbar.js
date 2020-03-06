@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { Slate, Editable, ReactEditor, withReact, useSlate } from 'slate-react'
-import { Editor, createEditor } from 'slate'
+import { Editor, Transforms, Text, createEditor } from 'slate'
 import { css } from 'emotion'
 import { withHistory } from 'slate-history'
 
@@ -9,22 +9,10 @@ import { Range } from 'slate'
 
 const HoveringMenuExample = () => {
   const [value, setValue] = useState(initialValue)
-  const [selection, setSelection] = useState(null)
-  const editor = useMemo(
-    () => withFormatting(withHistory(withReact(createEditor()))),
-    []
-  )
+  const editor = useMemo(() => withHistory(withReact(createEditor())), [])
 
   return (
-    <Slate
-      editor={editor}
-      value={value}
-      selection={selection}
-      onChange={(value, selection) => {
-        setValue(value)
-        setSelection(selection)
-      }}
-    >
+    <Slate editor={editor} value={value} onChange={value => setValue(value)}>
       <HoveringToolbar />
       <Editable
         renderLeaf={props => <Leaf {...props} />}
@@ -32,14 +20,11 @@ const HoveringMenuExample = () => {
         onDOMBeforeInput={event => {
           switch (event.inputType) {
             case 'formatBold':
-              return editor.exec({ type: 'toggle_format', format: 'bold' })
+              return toggleFormat(editor, 'bold')
             case 'formatItalic':
-              return editor.exec({ type: 'toggle_format', format: 'italic' })
+              return toggleFormat(editor, 'italic')
             case 'formatUnderline':
-              return editor.exec({
-                type: 'toggle_format',
-                format: 'underlined',
-              })
+              return toggleFormat(editor, 'underline')
           }
         }}
       />
@@ -47,35 +32,18 @@ const HoveringMenuExample = () => {
   )
 }
 
-const withFormatting = editor => {
-  const { exec } = editor
-
-  editor.exec = command => {
-    switch (command.type) {
-      case 'toggle_format': {
-        const { format } = command
-        const isActive = isFormatActive(editor, format)
-        Editor.setNodes(
-          editor,
-          { [format]: isActive ? null : true },
-          { match: 'text', split: true }
-        )
-        break
-      }
-
-      default: {
-        exec(command)
-        break
-      }
-    }
-  }
-
-  return editor
+const toggleFormat = (editor, format) => {
+  const isActive = isFormatActive(editor, format)
+  Transforms.setNodes(
+    editor,
+    { [format]: isActive ? null : true },
+    { match: Text.isText, split: true }
+  )
 }
 
 const isFormatActive = (editor, format) => {
   const [match] = Editor.nodes(editor, {
-    match: { [format]: true },
+    match: n => n[format] === true,
     mode: 'all',
   })
   return !!match
@@ -113,7 +81,7 @@ const HoveringToolbar = () => {
       !selection ||
       !ReactEditor.isFocused(editor) ||
       Range.isCollapsed(selection) ||
-      Editor.text(editor, selection) === ''
+      Editor.string(editor, selection) === ''
     ) {
       el.removeAttribute('style')
       return
@@ -163,7 +131,7 @@ const FormatButton = ({ format, icon }) => {
       active={isFormatActive(editor, format)}
       onMouseDown={event => {
         event.preventDefault()
-        editor.exec({ type: 'toggle_format', format })
+        toggleFormat(editor, format)
       }}
     >
       <Icon>{icon}</Icon>

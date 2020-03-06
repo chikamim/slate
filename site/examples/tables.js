@@ -5,7 +5,6 @@ import { withHistory } from 'slate-history'
 
 const TablesExample = () => {
   const [value, setValue] = useState(initialValue)
-  const [selection, setSelection] = useState(null)
   const renderElement = useCallback(props => <Element {...props} />, [])
   const renderLeaf = useCallback(props => <Leaf {...props} />, [])
   const editor = useMemo(
@@ -13,56 +12,69 @@ const TablesExample = () => {
     []
   )
   return (
-    <Slate
-      editor={editor}
-      value={value}
-      selection={selection}
-      onChange={(value, selection) => {
-        setValue(value)
-        setSelection(selection)
-      }}
-    >
+    <Slate editor={editor} value={value} onChange={value => setValue(value)}>
       <Editable renderElement={renderElement} renderLeaf={renderLeaf} />
     </Slate>
   )
 }
 
 const withTables = editor => {
-  const { exec } = editor
+  const { deleteBackward, deleteForward, insertBreak } = editor
 
-  editor.exec = command => {
+  editor.deleteBackward = unit => {
     const { selection } = editor
-    const { type } = command
 
-    if (
-      (type === 'delete_forward' || type === 'delete_backward') &&
-      selection &&
-      Range.isCollapsed(selection)
-    ) {
-      const [cell] = Editor.nodes(editor, { match: { type: 'table-cell' } })
+    if (selection && Range.isCollapsed(selection)) {
+      const [cell] = Editor.nodes(editor, {
+        match: n => n.type === 'table-cell',
+      })
 
       if (cell) {
         const [, cellPath] = cell
-        const edge =
-          type === 'delete_backward'
-            ? Editor.start(editor, cellPath)
-            : Editor.end(editor, cellPath)
+        const start = Editor.start(editor, cellPath)
 
-        if (Point.equals(selection.anchor, edge)) {
+        if (Point.equals(selection.anchor, start)) {
           return
         }
       }
     }
 
-    if (type === 'insert_break' && selection) {
-      const [table] = Editor.nodes(editor, { match: { type: 'table' } })
+    deleteBackward(unit)
+  }
+
+  editor.deleteForward = unit => {
+    const { selection } = editor
+
+    if (selection && Range.isCollapsed(selection)) {
+      const [cell] = Editor.nodes(editor, {
+        match: n => n.type === 'table-cell',
+      })
+
+      if (cell) {
+        const [, cellPath] = cell
+        const end = Editor.end(editor, cellPath)
+
+        if (Point.equals(selection.anchor, end)) {
+          return
+        }
+      }
+    }
+
+    deleteForward(unit)
+  }
+
+  editor.insertBreak = () => {
+    const { selection } = editor
+
+    if (selection) {
+      const [table] = Editor.nodes(editor, { match: n => n.type === 'table' })
 
       if (table) {
         return
       }
     }
 
-    exec(command)
+    insertBreak()
   }
 
   return editor

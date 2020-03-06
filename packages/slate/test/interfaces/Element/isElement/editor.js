@@ -2,14 +2,23 @@ import { Element } from 'slate'
 
 export const input = {
   children: [],
-  selection: null,
   operations: [],
+  selection: null,
+  marks: null,
+  addMark() {},
   apply() {},
-  exec() {},
+  deleteBackward() {},
+  deleteForward() {},
+  deleteFragment() {},
+  insertBreak() {},
+  insertFragment() {},
+  insertNode() {},
+  insertText() {},
   isInline() {},
   isVoid() {},
   normalizeNode() {},
   onChange() {},
+  removeMark() {},
 }
 
 export const test = value => {

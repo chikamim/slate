@@ -1,10 +1,10 @@
 /** @jsx jsx */
 
-import { Editor } from 'slate'
+import { Transforms } from 'slate'
 import { jsx } from '../..'
 
 export const run = editor => {
-  editor.delete()
+  Transforms.delete(editor)
 }
 
 export const input = (
@@ -29,5 +29,3 @@ export const input = (
 )
 
 export const output = input
-
-export const skip = true

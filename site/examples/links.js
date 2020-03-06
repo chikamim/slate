@@ -1,29 +1,20 @@
 import React, { useState, useMemo } from 'react'
 import isUrl from 'is-url'
 import { Slate, Editable, withReact, useSlate } from 'slate-react'
-import { Editor, createEditor } from 'slate'
+import { Transforms, Editor, Range, createEditor } from 'slate'
 import { withHistory } from 'slate-history'
 
 import { Button, Icon, Toolbar } from '../components'
 
 const LinkExample = () => {
   const [value, setValue] = useState(initialValue)
-  const [selection, setSelection] = useState(null)
   const editor = useMemo(
     () => withLinks(withHistory(withReact(createEditor()))),
     []
   )
 
   return (
-    <Slate
-      editor={editor}
-      value={value}
-      selection={selection}
-      onChange={(value, selection) => {
-        setValue(value)
-        setSelection(selection)
-      }}
-    >
+    <Slate editor={editor} value={value} onChange={value => setValue(value)}>
       <Toolbar>
         <LinkButton />
       </Toolbar>
@@ -36,48 +27,46 @@ const LinkExample = () => {
 }
 
 const withLinks = editor => {
-  const { exec, isInline } = editor
+  const { insertData, insertText, isInline } = editor
 
   editor.isInline = element => {
     return element.type === 'link' ? true : isInline(element)
   }
 
-  editor.exec = command => {
-    if (command.type === 'insert_link') {
-      const { url } = command
-
-      if (editor.selection) {
-        wrapLink(editor, url)
-      }
-
-      return
+  editor.insertText = text => {
+    if (text && isUrl(text)) {
+      wrapLink(editor, text)
+    } else {
+      insertText(text)
     }
+  }
 
-    let text
-
-    if (command.type === 'insert_data') {
-      text = command.data.getData('text/plain')
-    } else if (command.type === 'insert_text') {
-      text = command.text
-    }
+  editor.insertData = data => {
+    const text = data.getData('text/plain')
 
     if (text && isUrl(text)) {
       wrapLink(editor, text)
     } else {
-      exec(command)
+      insertData(data)
     }
   }
 
   return editor
 }
 
+const insertLink = (editor, url) => {
+  if (editor.selection) {
+    wrapLink(editor, url)
+  }
+}
+
 const isLinkActive = editor => {
-  const [link] = Editor.nodes(editor, { match: { type: 'link' } })
+  const [link] = Editor.nodes(editor, { match: n => n.type === 'link' })
   return !!link
 }
 
 const unwrapLink = editor => {
-  Editor.unwrapNodes(editor, { match: { type: 'link' } })
+  Transforms.unwrapNodes(editor, { match: n => n.type === 'link' })
 }
 
 const wrapLink = (editor, url) => {
@@ -85,9 +74,20 @@ const wrapLink = (editor, url) => {
     unwrapLink(editor)
   }
 
-  const link = { type: 'link', url, children: [] }
-  Editor.wrapNodes(editor, link, { split: true })
-  Editor.collapse(editor, { edge: 'end' })
+  const { selection } = editor
+  const isCollapsed = selection && Range.isCollapsed(selection)
+  const link = {
+    type: 'link',
+    url,
+    children: isCollapsed ? [{ text: url }] : [],
+  }
+
+  if (isCollapsed) {
+    Transforms.insertNodes(editor, link)
+  } else {
+    Transforms.wrapNodes(editor, link, { split: true })
+    Transforms.collapse(editor, { edge: 'end' })
+  }
 }
 
 const Element = ({ attributes, children, element }) => {
@@ -112,7 +112,7 @@ const LinkButton = () => {
         event.preventDefault()
         const url = window.prompt('Enter the URL of the link:')
         if (!url) return
-        editor.exec({ type: 'insert_link', url })
+        insertLink(editor, url)
       }}
     >
       <Icon>link</Icon>

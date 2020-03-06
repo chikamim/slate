@@ -5,7 +5,12 @@ import { createHyperscript } from 'slate-hyperscript'
 
 describe('slate', () => {
   fixtures(__dirname, 'interfaces', ({ module }) => {
-    const { input, test, output } = module
+    let { input, test, output } = module
+
+    if (Editor.isEditor(input)) {
+      input = withTest(input)
+    }
+
     const result = test(input)
     assert.deepEqual(result, output)
   })
@@ -21,6 +26,7 @@ describe('slate', () => {
     })
 
     assert.deepEqual(editor.children, output.children)
+    assert.deepEqual(editor.selection, output.selection)
   })
 
   fixtures(__dirname, 'normalization', ({ module }) => {
@@ -28,13 +34,7 @@ describe('slate', () => {
     const editor = withTest(input)
     Editor.normalize(editor, { force: true })
     assert.deepEqual(editor.children, output.children)
-  })
-
-  fixtures(__dirname, 'queries', ({ module }) => {
-    const { input, run, output } = module
-    const editor = withTest(input)
-    const result = run(editor)
-    assert.deepEqual(result, output)
+    assert.deepEqual(editor.selection, output.selection)
   })
 
   fixtures(__dirname, 'transforms', ({ module }) => {
@@ -42,6 +42,7 @@ describe('slate', () => {
     const editor = withTest(input)
     run(editor)
     assert.deepEqual(editor.children, output.children)
+    assert.deepEqual(editor.selection, output.selection)
   })
 })
 

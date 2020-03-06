@@ -11,18 +11,9 @@ import {
 
 const EmbedsExample = () => {
   const [value, setValue] = useState(initialValue)
-  const [selection, setSelection] = useState(null)
   const editor = useMemo(() => withEmbeds(withReact(createEditor())), [])
   return (
-    <Slate
-      editor={editor}
-      value={value}
-      selection={selection}
-      onChange={(value, selection) => {
-        setValue(value)
-        setSelection(selection)
-      }}
-    >
+    <Slate editor={editor} value={value} onChange={value => setValue(value)}>
       <Editable
         renderElement={props => <Element {...props} />}
         placeholder="Enter some text..."
@@ -101,7 +92,7 @@ const VideoElement = ({ attributes, children, element }) => {
             }}
             onChange={value => {
               const path = editor.findPath(element)
-              Editor.setNodes(editor, { url: value }, { at: path })
+              Transforms.setNodes(editor, { url: value }, { at: path })
             }}
           />
         ) : null}

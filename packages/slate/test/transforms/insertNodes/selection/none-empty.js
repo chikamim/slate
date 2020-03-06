@@ -1,12 +1,12 @@
 /** @jsx jsx */
 
-import { Editor } from 'slate'
+import { Transforms } from 'slate'
 import { jsx } from '../../..'
 
 export const input = <editor />
 
 export const run = editor => {
-  Editor.insertNodes(editor, <block>one</block>)
+  Transforms.insertNodes(editor, <block>one</block>)
 }
 
 export const output = (
@@ -17,5 +17,3 @@ export const output = (
     </block>
   </editor>
 )
-
-export const skip = true

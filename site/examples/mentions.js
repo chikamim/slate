@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react'
-import { Editor, Range, createEditor } from 'slate'
+import { Editor, Transforms, Range, createEditor } from 'slate'
 import { withHistory } from 'slate-history'
 import {
   Slate,
@@ -15,7 +15,6 @@ import { Portal } from '../components'
 const MentionExample = () => {
   const ref = useRef()
   const [value, setValue] = useState(initialValue)
-  const [selection, setSelection] = useState(null)
   const [target, setTarget] = useState()
   const [index, setIndex] = useState(0)
   const [search, setSearch] = useState('')
@@ -46,8 +45,8 @@ const MentionExample = () => {
           case 'Tab':
           case 'Enter':
             event.preventDefault()
-            Editor.select(editor, target)
-            editor.exec({ type: 'insert_mention', character: chars[index] })
+            Transforms.select(editor, target)
+            insertMention(editor, chars[index])
             setTarget(null)
             break
           case 'Escape':
@@ -74,21 +73,20 @@ const MentionExample = () => {
     <Slate
       editor={editor}
       value={value}
-      selection={selection}
-      onChange={(value, selection) => {
+      onChange={value => {
         setValue(value)
-        setSelection(selection)
+        const { selection } = editor
 
         if (selection && Range.isCollapsed(selection)) {
           const [start] = Range.edges(selection)
           const wordBefore = Editor.before(editor, start, { unit: 'word' })
           const before = wordBefore && Editor.before(editor, wordBefore)
           const beforeRange = before && Editor.range(editor, before, start)
-          const beforeText = beforeRange && Editor.text(editor, beforeRange)
+          const beforeText = beforeRange && Editor.string(editor, beforeRange)
           const beforeMatch = beforeText && beforeText.match(/^@(\w+)$/)
           const after = Editor.after(editor, start)
           const afterRange = Editor.range(editor, start, after)
-          const afterText = Editor.text(editor, afterRange)
+          const afterText = Editor.string(editor, afterRange)
           const afterMatch = afterText.match(/^(\s|$)/)
 
           if (beforeMatch && afterMatch) {
@@ -142,7 +140,7 @@ const MentionExample = () => {
 }
 
 const withMentions = editor => {
-  const { exec, isInline, isVoid } = editor
+  const { isInline, isVoid } = editor
 
   editor.isInline = element => {
     return element.type === 'mention' ? true : isInline(element)
@@ -152,22 +150,13 @@ const withMentions = editor => {
     return element.type === 'mention' ? true : isVoid(element)
   }
 
-  editor.exec = command => {
-    if (command.type === 'insert_mention') {
-      const mention = {
-        type: 'mention',
-        character: command.character,
-        children: [{ text: '' }],
-      }
-
-      Editor.insertNodes(editor, mention)
-      Editor.move(editor)
-    } else {
-      exec(command)
-    }
-  }
-
   return editor
+}
+
+const insertMention = (editor, character) => {
+  const mention = { type: 'mention', character, children: [{ text: '' }] }
+  Transforms.insertNodes(editor, mention)
+  Transforms.move(editor)
 }
 
 const Element = props => {
