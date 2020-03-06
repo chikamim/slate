@@ -538,7 +538,18 @@ export const Editable = (props: EditableProps) => {
               !isEventHandled(event, attributes.onCompositionEnd)
             ) {
               state.isComposing = false
-
+              // NOTE: WKWebView IME input workaround
+              Transforms.move(editor, {
+                distance: 1,
+                unit: 'character',
+                edge: 'focus',
+                reverse: true,
+              })
+              Transforms.move(editor, {
+                distance: 1,
+                unit: 'character',
+                edge: 'focus',
+              })
               // COMPAT: In Chrome, `beforeinput` events for compositions
               // aren't correct and never fire the "insertFromComposition"
               // type that we need. So instead, insert whenever a composition
